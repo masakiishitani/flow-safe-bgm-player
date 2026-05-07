@@ -342,6 +342,9 @@ export default function Home() {
             style={{
               boxShadow: "0 0 40px rgba(0,0,0,0.5)",
               border: "1px solid rgba(255,255,255,0.06)",
+              // Apply blur to the wrapper so it affects the iframe inside
+              filter: blurPlayer ? "blur(12px) brightness(0.4)" : "none",
+              transition: "filter 0.4s ease",
             }}
           >
             <div
@@ -349,8 +352,6 @@ export default function Home() {
               style={{
                 width: "100%",
                 aspectRatio: "16/9",
-                filter: blurPlayer ? "blur(12px) brightness(0.4)" : "none",
-                transition: "filter 0.4s ease",
               }}
             />
           </div>
