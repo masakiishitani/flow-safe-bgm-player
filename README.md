@@ -27,6 +27,12 @@ pnpm dev
 
 ブラウザで `http://localhost:3000` を開いたら完了です。
 
+> **Windows ユーザーへの注意**: `.env` ファイルはメモ帳で保存すると UTF-16 BOM 付きになり、Vite が読み込めない場合があります。
+> PowerShell で以下のコマンドを使うと確実です：
+> ```powershell
+> Set-Content -Path ".env" -Value "VITE_YOUTUBE_API_KEY=YOUR_API_KEY" -Encoding UTF8
+> ```
+
 ---
 
 ## YouTube Data API v3 キーの取得
