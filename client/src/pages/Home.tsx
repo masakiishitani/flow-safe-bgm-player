@@ -211,6 +211,20 @@ export default function Home() {
           <span className="text-sm font-medium tracking-wide" style={{ opacity: 0.85 }}>
             Flow-Safe BGM
           </span>
+          {/* Elapsed time — shown in header when timer is running */}
+          {timerPhase !== "idle" && timerPhase !== "done" && (
+            <span
+              className="text-xs ml-2"
+              style={{ opacity: 0.4, fontVariantNumeric: "tabular-nums" }}
+            >
+              {timerPhase === "fading" ? `${elapsedMinutes}分 フェード中` : `${elapsedMinutes}分経過`}
+            </span>
+          )}
+          {timerPhase === "done" && (
+            <span className="text-xs ml-2" style={{ opacity: 0.4 }}>
+              セッション終了
+            </span>
+          )}
         </div>
         <button
           onClick={() => setShowSettings((s) => !s)}
@@ -445,13 +459,27 @@ export default function Home() {
         )}
       </main>
 
-      {/* ── Footer: Passive Timer ── */}
-      {elapsedLabel && (
+      {/* ── Progress bar — fixed at very bottom of screen ── */}
+      {timerPhase !== "idle" && (
         <div
-          className="fixed bottom-3 right-4 text-xs pointer-events-none select-none"
-          style={{ opacity: 0.3, fontVariantNumeric: "tabular-nums" }}
+          style={{
+            position: "fixed",
+            bottom: 0,
+            left: 0,
+            width: "100%",
+            height: "3px",
+            backgroundColor: "rgba(255,255,255,0.06)",
+            pointerEvents: "none",
+          }}
         >
-          {elapsedLabel}
+          <div
+            style={{
+              height: "100%",
+              width: `${Math.min(100, (elapsedMinutes / 125) * 100)}%`,
+              backgroundColor: timerPhase === "fading" ? "rgba(236,72,153,0.6)" : "rgba(255,255,255,0.3)",
+              transition: "width 60s linear, background-color 1s ease",
+            }}
+          />
         </div>
       )}
     </div>
