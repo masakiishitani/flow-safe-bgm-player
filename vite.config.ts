@@ -170,6 +170,7 @@ export default defineConfig({
   },
   server: {
     host: true,
+    port: 3000,
     allowedHosts: [
       ".manuspre.computer",
       ".manus.computer",
@@ -180,8 +181,7 @@ export default defineConfig({
       "127.0.0.1",
     ],
     fs: {
-      strict: true,
-      deny: ["**/.*"],
+      strict: false,
     },
   },
 });
