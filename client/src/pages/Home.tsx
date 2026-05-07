@@ -26,6 +26,8 @@ export default function Home() {
   const [showSettings, setShowSettings] = useState(false);
   const [vol, setVol] = useState(volumeStore.get());
   const importRef = useRef<HTMLInputElement>(null);
+  // Track pending video to load once player becomes ready
+  const pendingVideoRef = useRef<string | null>(null);
 
   // ── YouTube Player ──────────────────────────────────────────────────────
   const handleVideoEnded = useCallback(() => {
@@ -70,7 +72,7 @@ export default function Home() {
     }
   }, []);
 
-  // ── Load video when index changes ───────────────────────────────────────
+  // ── Load video when index or playlist changes ───────────────────────────
   useEffect(() => {
     if (playlist.length === 0 || appState !== "playing") return;
     if (currentIndex >= playlist.length) {
@@ -79,8 +81,21 @@ export default function Home() {
     }
     const video = playlist[currentIndex];
     setCurrentVideo(video);
-    if (isReady) loadVideo(video.id);
-  }, [currentIndex, playlist, isReady, appState, keyword, fetchPlaylist, loadVideo]);
+    if (isReady) {
+      loadVideo(video.id);
+    } else {
+      // Player not ready yet — store the video ID and load it once ready
+      pendingVideoRef.current = video.id;
+    }
+  }, [currentIndex, playlist, appState, keyword, fetchPlaylist, loadVideo, isReady]);
+
+  // ── When player becomes ready, load any pending video ──────────────────
+  useEffect(() => {
+    if (isReady && pendingVideoRef.current) {
+      loadVideo(pendingVideoRef.current);
+      pendingVideoRef.current = null;
+    }
+  }, [isReady, loadVideo]);
 
   // ── Start timer when first video plays ─────────────────────────────────
   useEffect(() => {
@@ -171,6 +186,7 @@ export default function Home() {
     setPlaylist([]);
     setCurrentVideo(null);
     setCurrentIndex(0);
+    pendingVideoRef.current = null;
   };
 
   // ── Elapsed display ─────────────────────────────────────────────────────
@@ -314,104 +330,105 @@ export default function Home() {
           </div>
         )}
 
-        {/* ── Player ── */}
-        {appState === "playing" && (
-          <div className="w-full flex flex-col gap-4 fade-in">
-
-            {/* Video player */}
+        {/* ── Player: video container is ALWAYS in DOM (required for YT.Player init) ── */}
+        {/* visibility controlled via CSS, not conditional rendering */}
+        <div
+          className="w-full flex flex-col gap-4"
+          style={{ display: appState === "playing" ? "flex" : "none" }}
+        >
+          {/* Video player */}
+          <div
+            className="rounded overflow-hidden w-full"
+            style={{
+              boxShadow: "0 0 40px rgba(0,0,0,0.5)",
+              border: "1px solid rgba(255,255,255,0.06)",
+            }}
+          >
             <div
-              className="rounded overflow-hidden w-full"
+              id={CONTAINER_ID}
               style={{
-                boxShadow: "0 0 40px rgba(0,0,0,0.5)",
-                border: "1px solid rgba(255,255,255,0.06)",
+                width: "100%",
+                aspectRatio: "16/9",
+                filter: blurPlayer ? "blur(12px) brightness(0.4)" : "none",
+                transition: "filter 0.4s ease",
               }}
-            >
-              <div
-                id={CONTAINER_ID}
-                style={{
-                  width: "100%",
-                  aspectRatio: "16/9",
-                  filter: blurPlayer ? "blur(12px) brightness(0.4)" : "none",
-                  transition: "filter 0.4s ease",
-                }}
-              />
-            </div>
-
-            {/* Track info */}
-            {currentVideo && (
-              <div className="flex items-start justify-between gap-2 px-1">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate" style={{ opacity: 0.9 }}>
-                    {currentVideo.title}
-                  </p>
-                  <p className="text-xs mt-0.5 truncate" style={{ opacity: 0.45 }}>
-                    {currentVideo.channelTitle}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setBlurPlayer((b) => !b)}
-                  className="text-xs px-2 py-1 rounded shrink-0 transition-colors"
-                  style={{ backgroundColor: "rgba(255,255,255,0.07)", opacity: 0.7 }}
-                  title="映像をぼかす"
-                >
-                  {blurPlayer ? "映像を表示" : "映像をぼかす"}
-                </button>
-              </div>
-            )}
-
-            {/* Controls: Play/Pause + Good/Bad */}
-            <div className="flex items-center justify-center gap-3 flex-wrap">
-              {/* Play/Pause */}
-              <button
-                onClick={handlePlayPause}
-                className="p-3 rounded-full transition-colors"
-                style={{ backgroundColor: "rgba(255,255,255,0.1)" }}
-                title={playerState === "playing" ? "一時停止" : "再生"}
-              >
-                {playerState === "playing" ? <Pause size={20} /> : <Play size={20} />}
-              </button>
-
-              {/* Good button */}
-              <button
-                onClick={handleGood}
-                className="btn-good flex items-center gap-2 px-6 py-3 rounded font-medium text-sm"
-                title="このチャンネルをお気に入りに追加"
-              >
-                <ThumbsUp size={16} />
-                Good
-              </button>
-
-              {/* Bad button (pink warning) */}
-              <button
-                onClick={handleBad}
-                className="btn-bad flex items-center gap-2 px-6 py-3 rounded font-medium text-sm"
-                title="このチャンネルをブロックしてスキップ"
-              >
-                <ThumbsDown size={16} />
-                Bad
-              </button>
-            </div>
-
-            {/* Volume slider */}
-            <div className="flex items-center justify-center gap-3 px-2">
-              <VolumeX size={14} style={{ opacity: 0.4 }} />
-              <input
-                type="range" min={0} max={100} value={vol}
-                onChange={handleVolumeChange}
-                className="w-40 accent-white"
-              />
-              <Volume2 size={14} style={{ opacity: 0.4 }} />
-              <span className="text-xs w-6 text-right" style={{ opacity: 0.4 }}>{vol}</span>
-            </div>
-
-            {/* Stop session */}
-            <div className="flex justify-center">
-              <button onClick={handleStop} className="text-xs underline" style={{ opacity: 0.35 }}>
-                セッションを終了
-              </button>
-            </div>
+            />
           </div>
-        )}
+
+          {/* Track info */}
+          {currentVideo && (
+            <div className="flex items-start justify-between gap-2 px-1">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate" style={{ opacity: 0.9 }}>
+                  {currentVideo.title}
+                </p>
+                <p className="text-xs mt-0.5 truncate" style={{ opacity: 0.45 }}>
+                  {currentVideo.channelTitle}
+                </p>
+              </div>
+              <button
+                onClick={() => setBlurPlayer((b) => !b)}
+                className="text-xs px-2 py-1 rounded shrink-0 transition-colors"
+                style={{ backgroundColor: "rgba(255,255,255,0.07)", opacity: 0.7 }}
+                title="映像をぼかす"
+              >
+                {blurPlayer ? "映像を表示" : "映像をぼかす"}
+              </button>
+            </div>
+          )}
+
+          {/* Controls: Play/Pause + Good/Bad */}
+          <div className="flex items-center justify-center gap-3 flex-wrap">
+            {/* Play/Pause */}
+            <button
+              onClick={handlePlayPause}
+              className="p-3 rounded-full transition-colors"
+              style={{ backgroundColor: "rgba(255,255,255,0.1)" }}
+              title={playerState === "playing" ? "一時停止" : "再生"}
+            >
+              {playerState === "playing" ? <Pause size={20} /> : <Play size={20} />}
+            </button>
+
+            {/* Good button */}
+            <button
+              onClick={handleGood}
+              className="btn-good flex items-center gap-2 px-6 py-3 rounded font-medium text-sm"
+              title="このチャンネルをお気に入りに追加"
+            >
+              <ThumbsUp size={16} />
+              Good
+            </button>
+
+            {/* Bad button (pink warning) */}
+            <button
+              onClick={handleBad}
+              className="btn-bad flex items-center gap-2 px-6 py-3 rounded font-medium text-sm"
+              title="このチャンネルをブロックしてスキップ"
+            >
+              <ThumbsDown size={16} />
+              Bad
+            </button>
+          </div>
+
+          {/* Volume slider */}
+          <div className="flex items-center justify-center gap-3 px-2">
+            <VolumeX size={14} style={{ opacity: 0.4 }} />
+            <input
+              type="range" min={0} max={100} value={vol}
+              onChange={handleVolumeChange}
+              className="w-40 accent-white"
+            />
+            <Volume2 size={14} style={{ opacity: 0.4 }} />
+            <span className="text-xs w-6 text-right" style={{ opacity: 0.4 }}>{vol}</span>
+          </div>
+
+          {/* Stop session */}
+          <div className="flex justify-center">
+            <button onClick={handleStop} className="text-xs underline" style={{ opacity: 0.35 }}>
+              セッションを終了
+            </button>
+          </div>
+        </div>
 
         {/* ── Fade-out done message ── */}
         {timerPhase === "done" && (

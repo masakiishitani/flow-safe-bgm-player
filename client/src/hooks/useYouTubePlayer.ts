@@ -49,9 +49,20 @@ export function useYouTubePlayer(
   const [volume, setVolumeState] = useState(80);
   const onVideoEndedRef = useRef(onVideoEnded);
   onVideoEndedRef.current = onVideoEnded;
+  // Track whether we've attempted to init (to avoid double-init)
+  const initAttemptedRef = useRef(false);
 
   const initPlayer = useCallback(() => {
+    // Ensure the container exists in DOM before creating the player
+    const container = document.getElementById(CONTAINER_ID);
+    if (!container) {
+      // Container not in DOM yet — will retry when it mounts
+      return;
+    }
     if (playerRef.current) return;
+    if (initAttemptedRef.current) return;
+    initAttemptedRef.current = true;
+
     playerRef.current = new window.YT.Player(CONTAINER_ID, {
       height: "100%",
       width: "100%",
@@ -87,16 +98,25 @@ export function useYouTubePlayer(
   }, []);
 
   useEffect(() => {
+    // Register the global callback so it fires when YT API script loads
+    const prevCallback = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => {
+      if (prevCallback) prevCallback();
+      initPlayer();
+    };
+
+    // If YT is already loaded, try to init immediately
     if (window.YT && window.YT.Player) {
       initPlayer();
-    } else {
-      window.onYouTubeIframeAPIReady = initPlayer;
     }
+
     return () => {
       if (playerRef.current) {
         try { playerRef.current.destroy(); } catch { /* ignore */ }
         playerRef.current = null;
       }
+      initAttemptedRef.current = false;
+      setIsReady(false);
     };
   }, [initPlayer]);
 
