@@ -24,6 +24,9 @@ export default function Home() {
   const [errorMsg, setErrorMsg] = useState("");
   const [blurPlayer, setBlurPlayer] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [whitelistCount, setWhitelistCount] = useState(() => whitelist.getChannels().length);
+  const [blacklistChannelCount, setBlacklistChannelCount] = useState(() => blacklist.getChannels().length);
+  const [blacklistVideoCount, setBlacklistVideoCount] = useState(() => blacklist.getVideos().length);
   const [vol, setVol] = useState(volumeStore.get());
   const importRef = useRef<HTMLInputElement>(null);
   // Track pending video to load once player becomes ready
@@ -120,6 +123,7 @@ export default function Home() {
   const handleGood = () => {
     if (!currentVideo) return;
     whitelist.addChannel(currentVideo.channelId);
+    setWhitelistCount(whitelist.getChannels().length);
     toast.success(`「${currentVideo.channelTitle}」をお気に入りに追加しました`);
   };
 
@@ -127,6 +131,8 @@ export default function Home() {
     if (!currentVideo) return;
     blacklist.addChannel(currentVideo.channelId);
     blacklist.addVideo(currentVideo.id);
+    setBlacklistChannelCount(blacklist.getChannels().length);
+    setBlacklistVideoCount(blacklist.getVideos().length);
     toast(`「${currentVideo.channelTitle}」をブロックしました`);
     setCurrentIndex((i) => i + 1);
   };
@@ -274,8 +280,8 @@ export default function Home() {
             {vol === 0 && <VolumeX size={14} style={{ opacity: 0.5 }} />}
           </div>
           <div className="text-xs" style={{ opacity: 0.45 }}>
-            お気に入りチャンネル: {whitelist.getChannels().length}件 ／
-            ブロック: {blacklist.getChannels().length}チャンネル・{blacklist.getVideos().length}動画
+            お気に入りチャンネル: {whitelistCount}件 ／
+            ブロック: {blacklistChannelCount}チャンネル・{blacklistVideoCount}動画
           </div>
         </div>
       )}
