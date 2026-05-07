@@ -27,7 +27,7 @@ export async function searchVideos(options: SearchOptions): Promise<VideoItem[]>
     throw new Error("YouTube API key is not set. Please add VITE_YOUTUBE_API_KEY to your .env file.");
   }
 
-  const { keyword, maxResults = 25 } = options;
+  const { keyword, maxResults = 50 } = options;
 
   const params = new URLSearchParams({
     part: "snippet",
@@ -56,7 +56,15 @@ export async function searchVideos(options: SearchOptions): Promise<VideoItem[]>
     categoryId: "10", // Music (from search filter)
   }));
 
-  return items.filter((v) => v.id !== "");
+  const filtered = items.filter((v) => v.id !== "");
+
+  // Shuffle results so the same keyword yields different videos each session
+  for (let i = filtered.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
+  }
+
+  return filtered;
 }
 
 /**
