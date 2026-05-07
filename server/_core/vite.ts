@@ -6,6 +6,9 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import viteConfig from "../../vite.config";
 
+// Project root = two levels up from server/_core/
+const PROJECT_ROOT = path.resolve(import.meta.dirname, "../..");
+
 export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
     middlewareMode: true,
@@ -16,6 +19,7 @@ export async function setupVite(app: Express, server: Server) {
   const vite = await createViteServer({
     ...viteConfig,
     configFile: false,
+    envDir: PROJECT_ROOT, // ensure .env is loaded from project root, not client/
     server: serverOptions,
     appType: "custom",
   });
