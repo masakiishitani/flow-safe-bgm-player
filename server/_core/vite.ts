@@ -16,10 +16,23 @@ export async function setupVite(app: Express, server: Server) {
     allowedHosts: true as const,
   };
 
+  // Load .env from project root explicitly so VITE_* vars are available to the frontend
+  const dotenv = await import("dotenv");
+  dotenv.config({ path: path.join(PROJECT_ROOT, ".env") });
+
+  // Build define map for all VITE_* env vars so Vite injects them into import.meta.env
+  const viteEnvDefine: Record<string, string> = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (key.startsWith("VITE_") && value !== undefined) {
+      viteEnvDefine[`import.meta.env.${key}`] = JSON.stringify(value);
+    }
+  }
+
   const vite = await createViteServer({
     ...viteConfig,
     configFile: false,
-    envDir: PROJECT_ROOT, // ensure .env is loaded from project root, not client/
+    envDir: PROJECT_ROOT,
+    define: { ...(viteConfig.define ?? {}), ...viteEnvDefine },
     server: serverOptions,
     appType: "custom",
   });
